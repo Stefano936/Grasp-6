@@ -9,12 +9,11 @@ using System.Collections.Generic;
 
 namespace Full_GRASP_And_SOLID
 {
-    public class Recipe : IRecipeContent // Modificado por DIP
-    {
+    public class Recipe : IRecipeContent {
         // Cambiado por OCP
         private IList<BaseStep> steps = new List<BaseStep>();
-
         public Product FinalProduct { get; set; }
+        private CountdownTimer countdownTimer;
 
         // Agregado por Creator
         public void AddStep(Product input, double quantity, Equipment equipment, int time)
@@ -61,6 +60,46 @@ namespace Full_GRASP_And_SOLID
             }
 
             return result;
+        }
+        public int GetCookTime()
+        {
+            int totalTime = 0;
+        // Verificar si es un Step o si es waitstep para poder calcular el tiempo 
+            foreach (BaseStep step in this.steps)
+            {
+                if (step is Step)
+                {
+                    totalTime += ((Step)step).Time;
+                }
+                else if (step is WaitStep)
+                {
+                    totalTime += ((WaitStep)step).Time;
+                }
+            }
+            return totalTime;
+        }
+        public bool Cooked{ get;private set;} = false;
+
+        private class RecipeAdapter : TimerClient 
+        {
+            Recipe Recipe;
+
+            public RecipeAdapter (Recipe recipe) {
+                this.Recipe = recipe;
+            }
+            public void TimeOut() {
+                this.Recipe.Cooked = true;
+            }
+        }
+
+        public void Cook() {
+            int time = this.GetCookTime() * 1000;
+
+            CountdownTimer timer = new CountdownTimer();
+            RecipeAdapter adapter = new RecipeAdapter(this);
+            timer.Register(time, adapter);
+
+            Cooked = true;
         }
     }
 }
